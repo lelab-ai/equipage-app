@@ -1,5 +1,5 @@
 import { D1Store, D1Database } from './db';
-import { store as fallbackStore } from './store';
+import { store as fallbackStore, isValidPublicHttpUrl } from './store';
 
 export interface Env {
   DB?: D1Database;
@@ -215,6 +215,31 @@ export default {
         if (path === '/api/failures') {
           const failures = await db.getFailures();
           return jsonResponse(failures);
+        }
+
+        // 12b. Moniteurs HTTP externes (Option A : SaaS multi-services)
+        if (path === '/api/monitors') {
+          if (method === 'GET') {
+            const monitors = await db.getMonitors();
+            return jsonResponse(monitors);
+          }
+          if (method === 'POST') {
+            const body = await request.json() as any;
+            if (!body.name || !body.url) {
+              return jsonResponse({ error: 'Le nom et l\'URL du service sont obligatoires.' }, 400);
+            }
+            const validation = isValidPublicHttpUrl(body.url);
+            if (!validation.valid) {
+              return jsonResponse({ error: validation.reason }, 400);
+            }
+            const newMon = await db.addMonitor({
+              name: String(body.name).trim(),
+              url: String(body.url).trim(),
+              interval_seconds: Number(body.interval_seconds) || 60,
+              timeout_ms: Number(body.timeout_ms) || 5000
+            });
+            return jsonResponse(newMon, 201);
+          }
         }
 
         // 13. Webhooks
