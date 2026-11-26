@@ -1,14 +1,24 @@
 import React, { useState } from 'react';
-import { StatusService, Incident } from '../../functions/types';
+import { StatusService, Incident, Monitor } from '../../functions/types';
+import { MonitorsSection } from './MonitorsSection';
 
 interface StatusPageTabProps {
   services: StatusService[];
   incidents: Incident[];
+  monitors?: Monitor[];
+  onAddMonitor?: (name: string, url: string) => Promise<{ success: boolean; error?: string }>;
   onRefresh: () => void;
   onInspectCockpit?: () => void;
 }
 
-export const StatusPageTab: React.FC<StatusPageTabProps> = ({ services, incidents, onRefresh, onInspectCockpit }) => {
+export const StatusPageTab: React.FC<StatusPageTabProps> = ({ 
+  services, 
+  incidents, 
+  monitors = [], 
+  onAddMonitor, 
+  onRefresh, 
+  onInspectCockpit 
+}) => {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const activeIncident = incidents.find(i => i.status !== 'resolved');
   const isHealthy = !activeIncident && services.every(s => s.status === 'operational');
@@ -220,6 +230,13 @@ export const StatusPageTab: React.FC<StatusPageTabProps> = ({ services, incident
           ))}
         </div>
       </div>
+
+      {/* External HTTP Monitors (Option A SaaS) */}
+      <MonitorsSection 
+        monitors={monitors} 
+        onAddMonitor={onAddMonitor || (async () => ({ success: true }))} 
+        onRefresh={onRefresh} 
+      />
 
       {/* Incidents Journal */}
       <div className="card">

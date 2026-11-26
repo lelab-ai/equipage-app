@@ -133,3 +133,15 @@ export interface SystemMetrics {
   slo_availability: number;
   emergency_stop: boolean;
 }
+
+export interface Monitor {
+  id: string;
+  name: string;
+  url: string;
+  interval_seconds: number;
+  timeout_ms: number;
+  status: 'operational' | 'degraded' | 'down';
+  last_latency_ms: number | null;
+  last_checked_at: string | null;
+  created_at: string;
+}

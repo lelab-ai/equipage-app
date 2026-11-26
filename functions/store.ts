@@ -7,12 +7,47 @@ import {
   Incident,
   CostEntry,
   NarrativeEntry,
-  SystemMetrics
+  SystemMetrics,
+  Monitor
 } from './types';
+
+// Validation stricte anti-SSRF pour les URLs externes renseignées
+export function isValidPublicHttpUrl(urlString: string): { valid: boolean; reason?: string } {
+  try {
+    const url = new URL(urlString);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return { valid: false, reason: 'Seuls les protocoles http:// et https:// sont autorisés.' };
+    }
+    const hostname = url.hostname.toLowerCase();
+    // Rejet strict anti-SSRF (localhost, ranges privés RFC 1918, lien local, loopback)
+    if (
+      hostname === 'localhost' ||
+      hostname.endsWith('.localhost') ||
+      hostname.endsWith('.local') ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '::1' ||
+      hostname.startsWith('10.') ||
+      hostname.startsWith('192.168.') ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname) ||
+      hostname.startsWith('169.254.')
+    ) {
+      return { valid: false, reason: 'Protection anti-SSRF : les adresses IP privées, locales ou internes sont strictement interdites.' };
+    }
+    return { valid: true };
+  } catch (err) {
+    return { valid: false, reason: 'URL invalide ou mal formée.' };
+  }
+}
 
 // État initial mémoire pour tests, dev local et réactivité
 let emergencyStop = false;
 let emergencyStopReason = '';
+
+let monitors: Monitor[] = [
+  { id: 'MON-001', name: 'GitHub API Public', url: 'https://api.github.com', interval_seconds: 60, timeout_ms: 3000, status: 'operational', last_latency_ms: 42, last_checked_at: new Date().toISOString(), created_at: '2026-11-26T12:00:00Z' },
+  { id: 'MON-002', name: 'Cloudflare CDN Edge', url: 'https://1.1.1.1', interval_seconds: 60, timeout_ms: 2000, status: 'operational', last_latency_ms: 18, last_checked_at: new Date().toISOString(), created_at: '2026-11-26T12:30:00Z' }
+];
 
 let services: StatusService[] = [
   { id: 'api', name: 'API Edge & Probe', description: 'Points d\'entrée Cloudflare Workers et vérification de santé', status: 'operational', uptime_percentage: 99.98, avg_latency_ms: 38, last_checked_at: new Date().toISOString(), order_index: 1 },
@@ -342,6 +377,32 @@ export const store = {
 
   getNarrative() {
     return [...narrativeEntries];
+  },
+
+  getMonitors() {
+    return [...monitors];
+  },
+
+  addMonitor(data: { name: string; url: string; interval_seconds?: number; timeout_ms?: number }): Monitor {
+    const newMon: Monitor = {
+      id: `MON-${Date.now().toString().slice(-4)}`,
+      name: data.name,
+      url: data.url,
+      interval_seconds: data.interval_seconds || 60,
+      timeout_ms: data.timeout_ms || 5000,
+      status: 'operational',
+      last_latency_ms: Math.floor(Math.random() * 40) + 15,
+      last_checked_at: new Date().toISOString(),
+      created_at: new Date().toISOString()
+    };
+    monitors.unshift(newMon);
+    return newMon;
+  },
+
+  deleteMonitor(id: string): boolean {
+    const initialLen = monitors.length;
+    monitors = monitors.filter(m => m.id !== id);
+    return monitors.length < initialLen;
   },
 
   getMetrics(): SystemMetrics {

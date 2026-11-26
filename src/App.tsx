@@ -22,7 +22,8 @@ import {
   Incident, 
   NarrativeEntry, 
   FailureEntry,
-  SystemMetrics 
+  SystemMetrics,
+  Monitor
 } from '../functions/types';
 
 export const App: React.FC = () => {
@@ -30,6 +31,7 @@ export const App: React.FC = () => {
 
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
   const [services, setServices] = useState<StatusService[]>([]);
+  const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [items, setItems] = useState<BacklogItem[]>([]);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [runs, setRuns] = useState<AgentRun[]>([]);
@@ -46,7 +48,7 @@ export const App: React.FC = () => {
   const refreshData = async () => {
     try {
       setLoadError(null);
-      const [mRes, sRes, iRes, dRes, rRes, aRes, incRes, nRes, fRes] = await Promise.all([
+      const [mRes, sRes, iRes, dRes, rRes, aRes, incRes, nRes, fRes, monRes] = await Promise.all([
         fetch('/api/metrics').then(r => r.json()),
         fetch('/api/status').then(r => r.json()),
         fetch('/api/items').then(r => r.json()),
@@ -55,7 +57,8 @@ export const App: React.FC = () => {
         fetch('/api/approvals').then(r => r.json()),
         fetch('/api/incidents').then(r => r.json()),
         fetch('/api/narrator').then(r => r.json()),
-        fetch('/api/failures').then(r => r.json())
+        fetch('/api/failures').then(r => r.json()),
+        fetch('/api/monitors').then(r => r.json()).catch(() => [])
       ]);
 
       setMetrics(mRes);
@@ -67,11 +70,30 @@ export const App: React.FC = () => {
       setIncidents(incRes || []);
       setNarrative(nRes || []);
       setFailures(fRes || []);
+      setMonitors(Array.isArray(monRes) ? monRes : []);
     } catch (err: any) {
       console.error('Erreur de chargement des données SQL D1:', err);
       setLoadError("Impossible de charger les données en direct depuis Cloudflare D1.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddMonitor = async (name: string, url: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const res = await fetch('/api/monitors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, url })
+      });
+      const data = await res.json() as any;
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Erreur de validation' };
+      }
+      setMonitors(prev => [data, ...prev]);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Erreur réseau' };
     }
   };
 
@@ -303,6 +325,8 @@ export const App: React.FC = () => {
           <StatusPageTab 
             services={services} 
             incidents={incidents} 
+            monitors={monitors}
+            onAddMonitor={handleAddMonitor}
             onRefresh={refreshData} 
             onInspectCockpit={() => setActiveTab('runs')}
           />
