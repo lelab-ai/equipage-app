@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "💬 Échanger sur GitHub Discussions"
+    url: "https://github.com/lelab-ai/equipage/discussions"
+    about: "Posez vos questions, partagez vos idées ou échangez avec l'équipe sans ouvrir de ticket formel."
+  - name: "📊 Page de Statut en direct (Production)"
+    url: "https://equipage.lelab.ai"
+    about: "Consulter la disponibilité des services en temps réel et la latence SQL D1."
