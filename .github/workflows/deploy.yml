@@ -1,0 +1,64 @@
+name: Continuous Deployment & Auto-Rollback
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Application
+        run: npm run build
+
+      - name: Deploy to Cloudflare
+        id: cloudflare_deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+
+      - name: Post-Deployment Health Check
+        id: health_check
+        run: |
+          echo "Vérification post-déploiement de l'API et de la page de statut..."
+          TARGET_URL="https://equipage.lelab.ai/api/health"
+          # Tentative de vérification (max 5 essais)
+          SUCCESS=0
+          for i in {1..5}; do
+            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$TARGET_URL" || true)
+            if [ "$RESPONSE" = "200" ]; then
+              echo "Health check réussi (HTTP 200) à l'essai $i"
+              SUCCESS=1
+              break
+            fi
+            echo "Essai $i échoué (HTTP $RESPONSE), nouvelle tentative dans 5s..."
+            sleep 5
+          done
+
+          if [ "$SUCCESS" -ne 1 ]; then
+            echo "Échec du probe de santé après déploiement. Déclenchement du rollback !"
+            exit 1
+          fi
+
+      - name: Auto-Rollback on Failure
+        if: failure() && steps.cloudflare_deploy.outcome == 'success'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: rollback

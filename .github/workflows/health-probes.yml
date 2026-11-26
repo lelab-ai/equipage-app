@@ -1,0 +1,70 @@
+name: "Sondes Externes de Surveillance SRE (GitHub Actions Cron)"
+
+on:
+  schedule:
+    # Exécution périodique toutes les 30 minutes (entièrement gratuit sur runner Linux)
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Déclenchement manuel possible
+
+jobs:
+  probe:
+    name: "Probe de santé Edge & D1 (equipage.lelab.ai)"
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write # Permet d'ouvrir automatiquement une issue en cas de panne
+      contents: read
+
+    steps:
+      - name: "Mesure de disponibilité et latence de l'API"
+        id: probe_health
+        run: |
+          TARGET_URL="https://equipage.lelab.ai/api/health"
+          echo "Exécution du probe vers $TARGET_URL..."
+
+          # Mesure du code HTTP et du temps total en secondes
+          HTTP_RESPONSE=$(curl -s -w "\n%{http_code}\n%{time_total}" "$TARGET_URL")
+          BODY=$(echo "$HTTP_RESPONSE" | sed -e '$d' | sed -e '$d')
+          HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n 2 | head -n 1)
+          TOTAL_TIME=$(echo "$HTTP_RESPONSE" | tail -n 1)
+
+          # Conversion en millisecondes
+          LATENCY_MS=$(echo "$TOTAL_TIME * 1000 / 1" | bc)
+
+          echo "Code HTTP retourné : $HTTP_CODE"
+          echo "Latence réseau globale : ${LATENCY_MS} ms"
+          echo "Corps de la réponse : $BODY"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "ERREUR : Code HTTP anormal ($HTTP_CODE)"
+            echo "IS_FAILURE=true" >> $GITHUB_ENV
+            echo "ERROR_REASON=Code HTTP $HTTP_CODE sur $TARGET_URL" >> $GITHUB_ENV
+            exit 1
+          fi
+
+          if [ "$LATENCY_MS" -gt 1500 ]; then
+            echo "ATTENTION : Dégradation de performance (> 1500ms)"
+            echo "IS_DEGRADED=true" >> $GITHUB_ENV
+          fi
+
+      - name: "Alerte automatique : Ouverture d'incident GitHub"
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Détection d'un échec de sonde. Vérification si un incident ouvert existe déjà..."
+          EXISTING_ISSUES=$(gh issue list --label "incident" --state open --json number --jq 'length')
+
+          if [ "$EXISTING_ISSUES" -eq "0" ]; then
+            echo "Création d'une nouvelle alerte incident..."
+            gh issue create \
+              --title "[INCIDENT AUTOMATIQUE] : Échec de la sonde de disponibilité externe" \
+              --label "incident,sre-alerte" \
+              --body "### 🚨 Détection de panne par le probe externe GitHub Actions
+**Date** : $(date -u)
+**URL vérifiée** : https://equipage.lelab.ai/api/health
+**Anomalie** : $ERROR_REASON
+
+L'agent Exploitation (SRE) a été notifié pour diagnostic et remédiation."
+          else
+            echo "Un incident est déjà en cours de traitement, pas de création de doublon."
+          fi

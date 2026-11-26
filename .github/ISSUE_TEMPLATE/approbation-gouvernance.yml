@@ -1,0 +1,41 @@
+name: "⚖️ Demande d'approbation humaine (Gouvernance)"
+description: "Soumettre une action sensible nécessitant la validation explicite du sponsor (mode approve)."
+title: "[APPROBATION] : "
+labels: ["gouvernance", "approbation-requise"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Conformément à [`policies.yaml`](policies.yaml), certaines actions sensibles ne peuvent être exécutées de manière autonome sans l'accord explicite du sponsor (Bruno Delb).
+
+  - type: dropdown
+    id: type_action
+    attributes:
+      label: "Nature de l'action sensible"
+      options:
+        - "Ajout d'une nouvelle dépendance npm"
+        - "Modification du schéma de données D1 (migration SQL)"
+        - "Mise en production sensible"
+        - "Correctif de sécurité critique"
+        - "Dépassement de seuil budgétaire"
+        - "Changement de vision ou de règles d'architecture"
+    validations:
+      required: true
+
+  - type: textarea
+    id: justification
+    attributes:
+      label: "Justification technique et métier"
+      description: "Pourquoi cette action est-elle nécessaire maintenant ?"
+      placeholder: "L'ajout de ce paquet est requis pour..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: risques_mitigation
+    attributes:
+      label: "Risques identifiés et parades"
+      description: "Qu'est-ce qui pourrait échouer et quel est le plan de repli ?"
+      placeholder: "En cas d'échec, le rollback automatique restaurera..."
+    validations:
+      required: true

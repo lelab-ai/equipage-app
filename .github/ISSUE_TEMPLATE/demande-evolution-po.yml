@@ -1,0 +1,62 @@
+name: "💡 Demande d'évolution ou besoin client (Backlog PO)"
+description: "Soumettre une nouvelle fonctionnalité ou un besoin client pour arbitrage par l'agent PO."
+title: "[ÉVOLUTION] : "
+labels: ["besoin-client", "triage-po"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de soumettre votre proposition. L'agent **Product Owner (PO)** calcule automatiquement un score de priorisation basé sur la valeur client, la fréquence, l'effort estimé et l'alignement avec la vision du produit.
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: "Source de la demande"
+      description: "D'où émane ce besoin ?"
+      options:
+        - "Client simulé : Pressé (axé vitesse & simplifications)"
+        - "Client simulé : Exigeant en sécurité (audit, tokens, conformité)"
+        - "Client simulé : Sensible au prix (optimisation des coûts)"
+        - "Utilisateur réel (communauté GitHub)"
+        - "Sponsor (Bruno Delb)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: probleme
+    attributes:
+      label: "Problème à résoudre ou opportunité"
+      description: "Quel est le constat, la friction ou le besoin concret ?"
+      placeholder: "En tant qu'utilisateur, je souhaite pouvoir..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution_proposee
+    attributes:
+      label: "Solution ou comportement attendu"
+      description: "Comment le système doit-il réagir ou qu'est-ce qui doit être ajouté ?"
+      placeholder: "Ajout d'un endpoint /api/v1/probes pour..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: criticite
+    attributes:
+      label: "Valeur et urgence perçue"
+      options:
+        - "Faible : Confort d'utilisation ou cosmétique"
+        - "Moyenne : Fonctionnalité utile sans blocage"
+        - "Forte : Blocage opérationnel ou valeur majeure"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contraintes
+    attributes:
+      label: "Engagements de conformité"
+      options:
+        - label: "Cette évolution respecte le plafond budgétaire mensuel (< 30 €)"
+          required: true
+        - label: "Cette évolution préserve la latence SQL D1 P95 (< 100 ms)"
+          required: true

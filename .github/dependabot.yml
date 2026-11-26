@@ -1,0 +1,30 @@
+version: 2
+updates:
+  # Surveiller les dépendances npm de l'application
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependabot"
+      - "maintenance"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  # Surveiller les versions des GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:30"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 3
+    labels:
+      - "ci"
+      - "actions"

@@ -1,0 +1,52 @@
+name: "🔥 Signalement d'incident ou panne de sonde (SRE)"
+description: "Déclarer une dégradation de service, une panne de sonde ou une anomalie détectée."
+title: "[INCIDENT] : "
+labels: ["incident", "sre-alerte"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ce formulaire déclenche l'analyse par **l'agent Exploitation (SRE)**. Tout incident critique active automatiquement un gel des déploiements de nouvelles fonctionnalités conformément au SLO.
+
+  - type: dropdown
+    id: composant
+    attributes:
+      label: "Composant concerné"
+      description: "Quel service ou sous-système est impacté ?"
+      options:
+        - "API Edge Worker (functions/worker.ts)"
+        - "Stockage SQL D1 (equipage-d1)"
+        - "Tableau de bord React (src/)"
+        - "Réception des webhooks (Sentry / GitHub)"
+        - "Authentification et sécurité (Secrets & API Keys)"
+        - "Sonde externe HTTP tierce"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severite
+    attributes:
+      label: "Gravité de l'incident"
+      options:
+        - "Mineure : Ralentissement léger, sans perte de service"
+        - "Moyenne : Panne partielle ou dégradation mesurable"
+        - "Critique : Interruption totale de service ou brèche de sécurité"
+    validations:
+      required: true
+
+  - type: textarea
+    id: symptomes
+    attributes:
+      label: "Description des symptômes constatés"
+      description: "Que s'est-il passé ? Quels codes d'erreurs HTTP ou messages de log sont apparus ?"
+      placeholder: "Erreur HTTP 500 sur /api/status suite à..."
+    validations:
+      required: true
+
+  - type: input
+    id: url_sentry
+    attributes:
+      label: "Lien vers l'événement Sentry (optionnel)"
+      placeholder: "https://sentry.io/organizations/lelab/issues/..."
+    validations:
+      required: false
